@@ -75,6 +75,8 @@ const dotEls = new Map();       // puntos brillosos por id
 const uniEls = new Map();       // marcadores de universidades por uid
 let UNI_DATA = [];              // universidades (QS 2026) embebidas
 let uniVisible = true;          // mostrar / ocultar universidades
+let perfInteracting = false;    // pausa efectos decorativos durante drag/zoom (Marvin queda activo)
+let perfTimer = null;
 const activos = new Set(Object.keys(TIPOS));      // tipos visibles
 const settings = {
   oceanIdx: 0,
@@ -301,12 +303,14 @@ function ajustarUniversidadesATierra() {
     u.displayLat = u.lat;
     u.displayLng = u.lng;
     u.snappedToLand = false;
+    u._displayVec = null;
     if (puntoEnTierra(u.lng, u.lat)) continue;
     const snap = puntoTierraMasCercano(u.lng, u.lat);
     if (!snap || snap.dist > 6) continue;
     u.displayLat = snap.lat;
     u.displayLng = snap.lng;
     u.snappedToLand = true;
+    u._displayVec = null;
   }
 }
 
@@ -685,11 +689,18 @@ function visibles() {
 let _faros = [];      // cache de faros visibles (oportunidades)
 let VIS_UNIS = [];    // universidades realmente en pantalla (cara visible + en rango de zoom)
 const MAX_VISIBLE_UNIS = 96;
+let lastMarkerKey = '';
+function maxUnisForAlt(alt) {
+  if (alt > 2.2) return 56;
+  if (alt > 1.45) return 72;
+  return MAX_VISIBLE_UNIS;
+}
 function refrescarPuntos() {
   _faros = visibles();
   GLOBE.pointsData(_faros);
   GLOBE.ringsData(_faros); // todos los puntos pulsan
-  actualizarMarcadores(GLOBE.pointOfView());     // arma htmlElementsData con culling
+  lastMarkerKey = '';
+  actualizarMarcadores(GLOBE.pointOfView(), true);     // arma htmlElementsData con culling
   document.getElementById('countNum').textContent = _faros.length;
 }
 
@@ -697,19 +708,32 @@ function refrescarPuntos() {
    cara visible del globo (dotp con la cámara) y dentro del rango de zoom.
    Los demás tendrían opacidad 0 igualmente, así que sacarlos del htmlElementsData
    evita que globe.gl los reproyecte en cada frame. Apariencia idéntica. */
-function actualizarMarcadores(pov) {
+function actualizarMarcadores(pov, force) {
   const alt = (pov && pov.altitude != null) ? pov.altitude : GLOBE.pointOfView().altitude;
+  const W = window.innerWidth, H = window.innerHeight;
+  const key = [
+    uniVisible ? 1 : 0,
+    Math.round(alt * 20),
+    Math.round((pov && pov.lat || 0) * 5),
+    Math.round((pov && pov.lng || 0) * 5),
+    Math.round(W / 80),
+    Math.round(H / 80),
+    _faros.length
+  ].join('|');
+  if (!force && key === lastMarkerKey) return;
+  lastMarkerKey = key;
   const vis = [];
   if (uniVisible && alt <= UNI_SHOW_ALT && UNI_DATA.length) {
     const cam = GLOBE.camera();
     const cp = cam.position;
     const camLen = Math.hypot(cp.x, cp.y, cp.z) || 1;
-    const W = window.innerWidth, H = window.innerHeight, M = 80;  // margen fuera de pantalla
+    const M = 80;  // margen fuera de pantalla
     const candidates = [];
     const cx = W / 2, cy = H / 2;
+    const maxVisible = maxUnisForAlt(alt);
     for (const u of UNI_DATA) {
       const lat = markerLat(u), lng = markerLng(u);
-      const c3 = GLOBE.getCoords(lat, lng, 0);
+      const c3 = uniDisplayVec(u);
       const nlen = Math.hypot(c3.x, c3.y, c3.z) || 1;
       const dotp = (c3.x * cp.x + c3.y * cp.y + c3.z * cp.z) / (nlen * camLen);
       let keep = dotp >= 0.10;                       // cara visible del globo
@@ -726,8 +750,8 @@ function actualizarMarcadores(pov) {
       }
     }
     candidates.sort((a, b) => a._screenD - b._screenD);
-    vis.push(...candidates.slice(0, MAX_VISIBLE_UNIS));
-    for (let i = MAX_VISIBLE_UNIS; i < candidates.length; i++) {
+    vis.push(...candidates.slice(0, maxVisible));
+    for (let i = maxVisible; i < candidates.length; i++) {
       const el = uniEls.get(candidates[i].uid);
       if (el) el.style.opacity = '0';
     }
@@ -739,6 +763,11 @@ function actualizarMarcadores(pov) {
   }
   VIS_UNIS = vis;
   GLOBE.htmlElementsData(_faros.concat(vis));
+}
+
+function uniDisplayVec(u) {
+  if (!u._displayVec) u._displayVec = GLOBE.getCoords(markerLat(u), markerLng(u), 0);
+  return u._displayVec;
 }
 
 /* el cilindro se achica (alto y radio) a medida que se hace zoom */
@@ -806,7 +835,8 @@ const UNI_SHOW_ALT = 2.85;        // por encima de esta altitud, las universidad
 function animarPuntos(now) {
   if (document.hidden) { puntosRAF = null; return; }   // pausa con la pestaña oculta
   puntosRAF = requestAnimationFrame(animarPuntos);
-  if (now - _puntosLast < 33) return;   // ~30 fps
+  const frameGap = perfInteracting ? 58 : 40; // menos trabajo durante drag/zoom, sin apagar Marvin
+  if (now - _puntosLast < frameGap) return;
   _puntosLast = now;
   const cam = GLOBE.camera();
   if (!cam) return;
@@ -865,7 +895,7 @@ function animarPuntos(now) {
       for (const u of visibleUnis) {
         const el = uniEls.get(u.uid);
         if (!el) continue;
-        const c3 = GLOBE.getCoords(markerLat(u), markerLng(u), 0);
+        const c3 = uniDisplayVec(u);
         const nlen = Math.hypot(c3.x, c3.y, c3.z) || 1;
         const dotp = (c3.x * cp.x + c3.y * cp.y + c3.z * cp.z) / (nlen * camLen);
         const op = Math.max(0, Math.min(1, (dotp - 0.12) / 0.18));
@@ -1102,17 +1132,29 @@ function wireSettings() {
    12. ROTACIÓN: pausa al interactuar, reanuda tras inactividad
 --------------------------------------------------------------------------- */
 let reanudarTimer = null;
+function setPerfInteracting(active, settleDelay = 420) {
+  if (perfTimer) clearTimeout(perfTimer);
+  if (active) {
+    if (!perfInteracting) document.body.classList.add('perf-interacting');
+    perfInteracting = true;
+    perfTimer = setTimeout(() => setPerfInteracting(false), settleDelay);
+  } else {
+    perfInteracting = false;
+    document.body.classList.remove('perf-interacting');
+  }
+}
 function wireRotationPause() {
   const el = document.getElementById('globeViz');
   const pausar = () => {
+    setPerfInteracting(true);
     GLOBE.controls().autoRotate = false;
     if (reanudarTimer) clearTimeout(reanudarTimer);
   };
   ['mousedown', 'touchstart', 'wheel'].forEach(ev =>
     el.addEventListener(ev, pausar, { passive: true }));
   ['mouseup', 'touchend'].forEach(ev =>
-    el.addEventListener(ev, () => reanudarRotacion(2600), { passive: true }));
-  el.addEventListener('wheel', () => reanudarRotacion(2600), { passive: true });
+    el.addEventListener(ev, () => { setPerfInteracting(false); reanudarRotacion(2600); }, { passive: true }));
+  el.addEventListener('wheel', () => { setPerfInteracting(true); reanudarRotacion(2600); }, { passive: true });
 }
 function reanudarRotacion(delay) {
   if (reanudarTimer) clearTimeout(reanudarTimer);
@@ -1161,7 +1203,9 @@ function initStars() {
   function loop(now) {
     if (document.hidden) { starsRAF = null; return; }   // pausa con la pestaña oculta
     starsRAF = requestAnimationFrame(loop);
-    if (now - last < 33) return;
+    if (perfInteracting) {
+      if (now - last < 250) return;
+    } else if (now - last < 45) return;
     last = now;
     t += 0.033;
     ctx.clearRect(0, 0, cv.width, cv.height);

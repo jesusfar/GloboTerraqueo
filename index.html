@@ -87,6 +87,8 @@
     50%{ box-shadow:0 0 14px 4px var(--c), 0 0 32px 10px color-mix(in srgb, var(--c) 62%, transparent); }
   }
   @media (prefers-reduced-motion: reduce){ .cyl-aura,.cyl-core{ animation:none } }
+  body.perf-interacting .cyl-aura,
+  body.perf-interacting .cyl-core{ animation-play-state:paused }
 
   /* ---------- Marcadores de universidades ---------- */
   .uni-mark{
