@@ -134,6 +134,17 @@
   .score-wrap .sk b{ color:#fff; font-family:'Montserrat',sans-serif; font-size:14px; letter-spacing:0; }
   .score-bar{ height:8px; border-radius:6px; background:rgba(255,255,255,.1); overflow:hidden; }
   .score-bar > i{ display:block; height:100%; border-radius:6px; background:linear-gradient(90deg, var(--violet), var(--cyan)); transition:width .5s cubic-bezier(.2,.9,.25,1); }
+  .tracker-metrics{ display:none; margin-top:18px; border-top:1px solid rgba(255,255,255,.09); padding-top:16px; }
+  .tracker-metrics.show{ display:block; }
+  .tracker-metrics .tm-head{
+    font-family:'Montserrat',sans-serif;font-weight:700;font-size:10px;letter-spacing:1px;
+    text-transform:uppercase;color:#9fb6d4;margin-bottom:10px;
+  }
+  .tm-grid{ display:grid;grid-template-columns:1fr 1fr;gap:9px; }
+  .tm-cell{ border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 11px;background:rgba(255,255,255,.045); }
+  .tm-cell .k{ font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:#7e97ba;margin-bottom:5px; }
+  .tm-cell .v{ font-family:'Montserrat',sans-serif;font-size:13px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+  .tm-cell.full{ grid-column:1/-1; }
   .cta.uni-cta{ color:#fff; background:linear-gradient(135deg, var(--violet), #8a4ff0, var(--cyan)); box-shadow:0 0 18px rgba(107,54,214,.5); text-decoration:none; }
   .cta.uni-cta:hover{ box-shadow:0 8px 26px rgba(107,54,214,.6); }
 
@@ -588,6 +599,16 @@
       <div class="score-wrap">
         <div class="sk">Puntaje QS <b id="u-score">—</b></div>
         <div class="score-bar"><i id="u-scorebar" style="width:0%"></i></div>
+      </div>
+      <div class="tracker-metrics" id="u-trackerMetrics">
+        <div class="tm-head">Datos actualizables</div>
+        <div class="tm-grid">
+          <div class="tm-cell"><div class="k">Publicaciones</div><div class="v" id="u-works">—</div></div>
+          <div class="tm-cell"><div class="k">Citas</div><div class="v" id="u-cites">—</div></div>
+          <div class="tm-cell"><div class="k">h-index</div><div class="v" id="u-hindex">—</div></div>
+          <div class="tm-cell"><div class="k">OpenAlex</div><div class="v" id="u-openalex">—</div></div>
+          <div class="tm-cell full"><div class="k">ROR</div><div class="v" id="u-ror">—</div></div>
+        </div>
       </div>
       <div class="meta-grid">
         <div class="meta-cell">

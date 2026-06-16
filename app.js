@@ -1057,6 +1057,7 @@ function abrirUniversidad(u) {
   det.querySelector('#u-scorebar').style.width = (isFinite(sc) ? Math.max(3, Math.min(100, sc)) : 0) + '%';
   det.querySelector('#u-country').textContent = u.country || '—';
   det.querySelector('#u-coords').textContent = fmtCoords(u.lat, u.lng);
+  renderTrackerMetrics(det, u);
   const maps = det.querySelector('#u-maps');
   maps.href = googleMapsUrl(u.lat, u.lng);
   maps.style.display = '';
@@ -1064,6 +1065,19 @@ function abrirUniversidad(u) {
   det.setAttribute('aria-hidden', 'false');
   GLOBE.controls().autoRotate = false;
   GLOBE.pointOfView({ lat: markerLat(u), lng: markerLng(u), altitude: 1.3 }, 900);
+}
+function renderTrackerMetrics(det, u) {
+  const box = det.querySelector('#u-trackerMetrics');
+  if (!box) return;
+  const hasMetrics = [u.works_total, u.citas_total, u.h_index, u.openalex_id, u.ror_id]
+    .some(v => v != null && v !== '');
+  box.classList.toggle('show', hasMetrics);
+  if (!hasMetrics) return;
+  det.querySelector('#u-works').textContent = compactNumber(u.works_total);
+  det.querySelector('#u-cites').textContent = compactNumber(u.citas_total);
+  det.querySelector('#u-hindex').textContent = u.h_index != null && u.h_index !== '' ? compactNumber(u.h_index) : '—';
+  det.querySelector('#u-openalex').textContent = shortId(u.openalex_id);
+  det.querySelector('#u-ror').textContent = shortId(u.ror_id);
 }
 function cerrarUniversidad() {
   const det = document.getElementById('uniDetail');
@@ -1262,6 +1276,16 @@ function hexA(hex, a) {
 }
 function capitalizar(s) {
   return s.charAt(0) + s.slice(1).toLowerCase();
+}
+function compactNumber(v) {
+  const n = Number(v);
+  if (!isFinite(n)) return '—';
+  return new Intl.NumberFormat('es-AR', { notation:'compact', maximumFractionDigits:1 }).format(n);
+}
+function shortId(v) {
+  const s = String(v == null ? '' : v).trim();
+  if (!s) return '—';
+  return s.replace(/^https?:\/\/openalex\.org\//, '').replace(/^https?:\/\/ror\.org\//, '');
 }
 
 /* arranque */
