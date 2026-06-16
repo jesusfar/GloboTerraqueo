@@ -304,11 +304,14 @@ function ajustarUniversidadesATierra() {
     u.displayLng = u.lng;
     u.snappedToLand = false;
     u._displayVec = null;
-    if (puntoEnTierra(u.lng, u.lat)) continue;
+    const enTierra = puntoEnTierra(u.lng, u.lat);
     const snap = puntoTierraMasCercano(u.lng, u.lat);
-    if (!snap || snap.dist > 6) continue;
-    u.displayLat = snap.lat;
-    u.displayLng = snap.lng;
+    if (!snap) continue;
+    if (enTierra && snap.dist > 0.72) continue;
+    if (!enTierra && snap.dist > 6) continue;
+    const interior = empujarHaciaTierra(u.lng, u.lat, snap, enTierra);
+    u.displayLat = interior.lat;
+    u.displayLng = interior.lng;
     u.snappedToLand = true;
     u._displayVec = null;
   }
@@ -346,6 +349,30 @@ function puntoTierraMasCercano(lng, lat) {
     }
   }
   return best;
+}
+
+function empujarHaciaTierra(srcLng, srcLat, snap, sourceIsLand) {
+  const cosLat = Math.max(0.08, Math.cos(snap.lat * Math.PI / 180));
+  const dx = sourceIsLand ? (srcLng - snap.lng) * cosLat : (snap.lng - srcLng) * cosLat;
+  const dy = sourceIsLand ? (srcLat - snap.lat) : (snap.lat - srcLat);
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len;
+  const uy = dy / len;
+  const originLng = sourceIsLand ? srcLng : snap.lng;
+  const originLat = sourceIsLand ? srcLat : snap.lat;
+  const steps = sourceIsLand
+    ? [0.10, 0.18, 0.28, 0.42, 0.58]
+    : [0.18, 0.32, 0.48, 0.68, 0.9, 1.2];
+
+  for (const step of steps) {
+    let lng = originLng + (ux * step) / cosLat;
+    let lat = originLat + uy * step;
+    if (lng > 180) lng -= 360; else if (lng < -180) lng += 360;
+    if (lat > 85 || lat < -85) continue;
+    if (puntoEnTierra(lng, lat)) return { lng, lat };
+  }
+
+  return sourceIsLand ? { lng: srcLng, lat: srcLat } : { lng: snap.lng, lat: snap.lat };
 }
 
 function puntoMasCercanoSegmento(px, py, ax, ay, bx, by, cosLat) {
