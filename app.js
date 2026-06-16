@@ -60,6 +60,7 @@ let CITY_PLACES = [];           // {lat,lng,name,rank} lugares poblados
 let STATE_LINES = [];           // límites de estados/provincias (paths)
 let STATE_LABELS = [];          // {lat,lng,name} nombres de estados/provincias
 let COUNTY_LINES = [];          // límites de 2º nivel (condados/municipios)
+let LAND_RINGS = [];            // anillos [lng,lat] para ajustar marcadores costeros
 let bordersLevel = -1;          // nivel de límites activo (-1 ninguno)
 let lastBordKey = '';           // gate de recálculo de límites
 let lastCityKey = '';           // gate de recálculo de ciudades
@@ -90,7 +91,8 @@ async function init() {
 
   // universidades (QS 2026 + recomendadas) desde universidades.js
   UNI_DATA = (window.UNIVERSIDADES || []).map((u, i) => ({
-    ...u, uid: 'u' + i, kind: 'uni', lat: +u.lat, lng: +u.lng
+    ...u, uid: 'u' + i, kind: 'uni', lat: +u.lat, lng: +u.lng,
+    displayLat: +u.lat, displayLng: +u.lng
   })).filter(u => isFinite(u.lat) && isFinite(u.lng));
 
   GLOBE = Globe({
@@ -145,7 +147,7 @@ async function init() {
   // capa HTML: faros de oportunidades + marcadores de universidades
   GLOBE
     .htmlElementsData([])
-    .htmlLat('lat').htmlLng('lng')
+    .htmlLat(markerLat).htmlLng(markerLng)
     .htmlAltitude(htmlAltAccessor)
     .htmlElement(crearHtmlEl);
 
@@ -249,6 +251,8 @@ function cargarContinentes() {
     .then(r => r.json())
     .then(geo => {
       const feats = (geo.features || []).filter(f => f.properties.ISO_A2 !== 'AQ'); // sin Antártida
+      prepararAnillosTierra(feats);
+      ajustarUniversidadesATierra();
       GLOBE
         .polygonsData(feats)
         .polygonCapColor(() => landCapColor())
@@ -268,8 +272,95 @@ function cargarContinentes() {
         };
       }).filter(l => l.name);
       actualizarEtiquetas(GLOBE.pointOfView());
+      actualizarMarcadores(GLOBE.pointOfView());
     })
     .catch(() => { /* esfera lisa de marca como fallback */ });
+}
+
+function markerLat(d) { return d && d.kind === 'uni' ? d.displayLat : d.lat; }
+function markerLng(d) { return d && d.kind === 'uni' ? d.displayLng : d.lng; }
+
+function prepararAnillosTierra(feats) {
+  LAND_RINGS = [];
+  for (const f of feats) {
+    const g = f.geometry;
+    if (!g) continue;
+    if (g.type === 'Polygon') {
+      for (const ring of g.coordinates) if (ring && ring.length > 2) LAND_RINGS.push(ring);
+    } else if (g.type === 'MultiPolygon') {
+      for (const poly of g.coordinates) {
+        for (const ring of poly) if (ring && ring.length > 2) LAND_RINGS.push(ring);
+      }
+    }
+  }
+}
+
+function ajustarUniversidadesATierra() {
+  if (!LAND_RINGS.length || !UNI_DATA.length) return;
+  for (const u of UNI_DATA) {
+    u.displayLat = u.lat;
+    u.displayLng = u.lng;
+    u.snappedToLand = false;
+    if (puntoEnTierra(u.lng, u.lat)) continue;
+    const snap = puntoTierraMasCercano(u.lng, u.lat);
+    if (!snap || snap.dist > 6) continue;
+    u.displayLat = snap.lat;
+    u.displayLng = snap.lng;
+    u.snappedToLand = true;
+  }
+}
+
+function puntoEnTierra(lng, lat) {
+  for (const ring of LAND_RINGS) {
+    if (puntoEnAnillo(lng, lat, ring)) return true;
+  }
+  return false;
+}
+
+function puntoEnAnillo(lng, lat, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1];
+    const xj = ring[j][0], yj = ring[j][1];
+    const crosses = (yi > lat) !== (yj > lat);
+    if (crosses) {
+      const x = ((xj - xi) * (lat - yi)) / ((yj - yi) || 1e-12) + xi;
+      if (lng < x) inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function puntoTierraMasCercano(lng, lat) {
+  const cosLat = Math.max(0.08, Math.cos(lat * Math.PI / 180));
+  let best = null;
+  for (const ring of LAND_RINGS) {
+    for (let i = 1; i < ring.length; i++) {
+      const a = ring[i - 1], b = ring[i];
+      const p = puntoMasCercanoSegmento(lng, lat, a[0], a[1], b[0], b[1], cosLat);
+      if (!best || p.dist < best.dist) best = p;
+    }
+  }
+  return best;
+}
+
+function puntoMasCercanoSegmento(px, py, ax, ay, bx, by, cosLat) {
+  let dx = bx - ax;
+  if (dx > 180) dx -= 360; else if (dx < -180) dx += 360;
+  const dy = by - ay;
+  const qx = px - ax;
+  const qy = py - ay;
+  const sx = dx * cosLat;
+  const qxs = qx * cosLat;
+  const len2 = sx * sx + dy * dy || 1e-12;
+  let t = (qxs * sx + qy * dy) / len2;
+  if (t < 0) t = 0; else if (t > 1) t = 1;
+  let lng = ax + dx * t;
+  if (lng > 180) lng -= 360; else if (lng < -180) lng += 360;
+  const lat = ay + dy * t;
+  const ddx = (px - lng) * cosLat;
+  const ddy = py - lat;
+  return { lng, lat, dist: Math.sqrt(ddx * ddx + ddy * ddy) };
 }
 
 /* ---------------------------------------------------------------------------
@@ -617,12 +708,13 @@ function actualizarMarcadores(pov) {
     const candidates = [];
     const cx = W / 2, cy = H / 2;
     for (const u of UNI_DATA) {
-      const c3 = GLOBE.getCoords(u.lat, u.lng, 0);
+      const lat = markerLat(u), lng = markerLng(u);
+      const c3 = GLOBE.getCoords(lat, lng, 0);
       const nlen = Math.hypot(c3.x, c3.y, c3.z) || 1;
       const dotp = (c3.x * cp.x + c3.y * cp.y + c3.z * cp.z) / (nlen * camLen);
       let keep = dotp >= 0.10;                       // cara visible del globo
       if (keep) {                                     // y dentro del viewport (con margen)
-        const s = GLOBE.getScreenCoords(u.lat, u.lng, 0);
+        const s = GLOBE.getScreenCoords(lat, lng, 0);
         keep = s.x >= -M && s.x <= W + M && s.y >= -M && s.y <= H + M;
         if (keep) u._screenD = (s.x - cx) * (s.x - cx) + (s.y - cy) * (s.y - cy);
       }
@@ -773,7 +865,7 @@ function animarPuntos(now) {
       for (const u of visibleUnis) {
         const el = uniEls.get(u.uid);
         if (!el) continue;
-        const c3 = GLOBE.getCoords(u.lat, u.lng, 0);
+        const c3 = GLOBE.getCoords(markerLat(u), markerLng(u), 0);
         const nlen = Math.hypot(c3.x, c3.y, c3.z) || 1;
         const dotp = (c3.x * cp.x + c3.y * cp.y + c3.z * cp.z) / (nlen * camLen);
         const op = Math.max(0, Math.min(1, (dotp - 0.12) / 0.18));
@@ -914,7 +1006,7 @@ function abrirUniversidad(u) {
   det.classList.add('open');
   det.setAttribute('aria-hidden', 'false');
   GLOBE.controls().autoRotate = false;
-  GLOBE.pointOfView({ lat: u.lat, lng: u.lng, altitude: 1.3 }, 900);
+  GLOBE.pointOfView({ lat: markerLat(u), lng: markerLng(u), altitude: 1.3 }, 900);
 }
 function cerrarUniversidad() {
   const det = document.getElementById('uniDetail');
