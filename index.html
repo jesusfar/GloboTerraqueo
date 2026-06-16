@@ -92,7 +92,7 @@
 
   /* ---------- Marcadores de universidades ---------- */
   .uni-mark{
-    position:absolute; left:0; top:0; width:26px; height:26px; margin:-13px 0 0 -13px;
+    position:absolute; left:0; top:0; width:32px; height:38px; margin:-36px 0 0 -16px;
     cursor:pointer; pointer-events:auto; will-change:transform,opacity;
     transition:filter .15s ease;
   }
@@ -100,7 +100,7 @@
      filtro que el compositor deba re-rasterizar al rotar). Apariencia casi idéntica
      al drop-shadow anterior, sin el coste por frame. */
   .uni-mark img{
-    width:100%; height:100%; display:block; -webkit-user-drag:none; user-select:none;
+    width:100%; height:100%; display:block; object-fit:contain; -webkit-user-drag:none; user-select:none;
     -webkit-filter:drop-shadow(0 2px 4px rgba(0,8,28,.6));
     filter:drop-shadow(0 2px 4px rgba(0,8,28,.6));
   }
@@ -205,6 +205,10 @@
     transition:all .18s ease;user-select:none;
   }
   .chip .dot{width:9px;height:9px;border-radius:50%;flex:none;box-shadow:0 0 8px currentColor}
+  .chip .uni-pin{
+    width:18px;height:22px;object-fit:contain;flex:none;
+    filter:drop-shadow(0 1px 4px rgba(253,168,24,.45));
+  }
   .chip:hover{background:rgba(255,255,255,.12)}
   .chip[aria-pressed="false"]{opacity:.38;filter:grayscale(.5)}
   .chip[aria-pressed="false"] .dot{box-shadow:none}
@@ -481,7 +485,7 @@
       </div>
       <div class="uni-row" style="padding:0 14px 14px">
         <div class="chip uni-chip" id="uniToggle" role="button" tabindex="0" aria-pressed="true" title="Mostrar / ocultar universidades">
-          <span class="dot" style="background:var(--violet);color:var(--violet)"></span>
+          <img class="uni-pin" src="assets/uni.png" alt="" draggable="false">
           Top Universidades · QS 2026
         </div>
       </div>
