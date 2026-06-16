@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ascendia · Propuestas de logo universidad</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg-dark:#002054; --bg-deep:#00163A;
+    --gold:#FDA818; --yellow:#FFCF31; --cyan:#00C7DD;
+    --violet:#6B36D6; --violet2:#4B22C9; --planet-blue:#2056A7;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Inter',system-ui,sans-serif;color:#fff;min-height:100vh;
+    background:radial-gradient(120% 90% at 50% 8%, #003a86 0%, var(--bg-dark) 38%, var(--bg-deep) 78%, #000c22 100%);
+    padding:54px 40px 80px;
+  }
+  .head{max-width:1180px;margin:0 auto 38px}
+  .kicker{font-family:'Montserrat';font-weight:700;font-size:11px;letter-spacing:2.4px;text-transform:uppercase;color:var(--cyan);margin-bottom:12px}
+  h1{font-family:'Montserrat';font-weight:800;font-size:32px;letter-spacing:.2px}
+  .sub{color:#9fb6d4;font-size:15px;margin-top:10px;max-width:680px;line-height:1.55}
+  .grid{
+    max-width:1180px;margin:0 auto;display:grid;
+    grid-template-columns:repeat(3,1fr);gap:22px;
+  }
+  .card{
+    background:rgba(8,28,62,.42);backdrop-filter:blur(16px);
+    border:1px solid rgba(255,255,255,.12);border-radius:18px;
+    box-shadow:0 14px 40px rgba(0,12,34,.45);overflow:hidden;
+    display:flex;flex-direction:column;
+  }
+  .card.cur{border-color:rgba(255,255,255,.07);opacity:.92}
+  .stage{
+    position:relative;height:210px;display:grid;place-items:center;
+    background:radial-gradient(90% 90% at 35% 30%, #15407f 0%, #0c2a5c 45%, #071c44 100%);
+    border-bottom:1px solid rgba(255,255,255,.08);overflow:hidden;
+  }
+  .stage::before{
+    content:"";position:absolute;inset:0;
+    background-image:radial-gradient(1.4px 1.4px at 20% 30%,#fff,transparent),radial-gradient(1.2px 1.2px at 70% 60%,#cfe0f4,transparent),radial-gradient(1px 1px at 45% 80%,#fff,transparent),radial-gradient(1.3px 1.3px at 85% 25%,#bcd,transparent);
+    opacity:.5;
+  }
+  .big{position:relative;width:120px;height:120px;filter:drop-shadow(0 8px 22px rgba(0,8,28,.55))}
+  .big svg{width:100%;height:100%;display:block}
+  .meta{padding:18px 20px 22px;display:flex;flex-direction:column;gap:14px}
+  .name{font-family:'Montserrat';font-weight:700;font-size:16px}
+  .desc{font-size:12.5px;color:#9fb6d4;line-height:1.5}
+  .scale-row{
+    display:flex;align-items:center;gap:16px;padding-top:14px;
+    border-top:1px solid rgba(255,255,255,.08);
+  }
+  .scale-globe{
+    position:relative;width:96px;height:60px;border-radius:10px;overflow:hidden;flex:none;
+    background:radial-gradient(70% 90% at 40% 20%, #1b4b8c, #0a2452 70%);
+    display:flex;align-items:center;justify-content:center;gap:10px;
+  }
+  .scale-globe img,.scale-globe .m26{width:26px;height:26px;filter:drop-shadow(0 2px 5px rgba(0,8,28,.65))}
+  .scale-globe .m26 svg{width:100%;height:100%}
+  .scale-cap{font-size:10.5px;letter-spacing:.6px;text-transform:uppercase;color:#7e97ba;line-height:1.5}
+  .scale-cap b{display:block;color:#cfe0f4;font-size:12px;letter-spacing:0;text-transform:none;font-weight:600}
+  .badge{
+    position:absolute;top:14px;left:14px;z-index:2;font-family:'Montserrat';font-weight:700;
+    font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;padding:5px 10px;border-radius:999px;
+  }
+  .badge.now{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#cfe0f4}
+  .badge.rec{background:rgba(0,199,221,.16);border:1px solid rgba(0,199,221,.5);color:#7fe9f4}
+  @media (max-width:980px){.grid{grid-template-columns:1fr 1fr}}
+  @media (max-width:660px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+  <div class="head">
+    <div class="kicker">Ascendia · Identidad</div>
+    <h1>Nuevo logo de universidad</h1>
+    <p class="sub">Propuestas para el marcador que señala las universidades del ranking QS sobre el globo. Cada una usa la paleta de marca —degradado violeta→cian y dorado— con un brillo que destaca sobre el navy estrellado. Abajo de cada opción se ve a tamaño real (26px) sobre el globo.</p>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <!-- definiciones SVG reutilizables -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="gVC" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#7B45E8"/><stop offset="1" stop-color="#00C7DD"/>
+      </linearGradient>
+      <linearGradient id="gGold" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#FFD451"/><stop offset="1" stop-color="#FDA818"/>
+      </linearGradient>
+      <radialGradient id="gCoin" cx="38%" cy="30%" r="80%">
+        <stop offset="0" stop-color="#2a5fb8"/><stop offset="55%" stop-color="#163f86"/><stop offset="1" stop-color="#0c285e"/>
+      </radialGradient>
+      <linearGradient id="gShield" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#6B36D6"/><stop offset="1" stop-color="#3a1a9e"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <script>
+    /* ---- Componentes SVG de cada propuesta (viewBox 64x64) ---- */
+    const caps = {};
+
+    // Birrete dentro de moneda con halo (RECOMENDADO)
+    caps.coin = `
+      <circle cx="32" cy="32" r="30" fill="url(#gCoin)" stroke="#00C7DD" stroke-width="2" />
+      <circle cx="32" cy="32" r="30" fill="none" stroke="rgba(0,199,221,.35)" stroke-width="5" opacity=".5"/>
+      <g transform="translate(32,33)">
+        <polygon points="0,-13 19,-5 0,3 -19,-5" fill="url(#gGold)"/>
+        <polygon points="0,-13 19,-5 0,3 -19,-5" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1"/>
+        <path d="M-11,-1 L-11,8 Q0,16 11,8 L11,-1 L0,3 Z" fill="#FDA818"/>
+        <path d="M19,-5 L19,9" stroke="#FFD451" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="19" cy="11" r="2.6" fill="#FFD451"/>
+        <circle cx="0" cy="-5" r="2.4" fill="#00163A"/>
+      </g>`;
+
+    // Birrete solo, con halo (minimal)
+    caps.cap = `
+      <circle cx="32" cy="34" r="26" fill="rgba(0,199,221,.16)"/>
+      <g transform="translate(32,33)">
+        <polygon points="0,-15 23,-6 0,3 -23,-6" fill="url(#gVC)"/>
+        <polygon points="0,-15 23,-6 0,3 -23,-6" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.2"/>
+        <path d="M-13,-1 L-13,9 Q0,19 13,9 L13,-1 L0,4 Z" fill="url(#gGold)"/>
+        <path d="M23,-6 L23,11" stroke="#FFD451" stroke-width="2.4" stroke-linecap="round"/>
+        <circle cx="23" cy="13" r="3" fill="#FFD451"/>
+        <circle cx="0" cy="-6" r="2.6" fill="#00163A"/>
+      </g>`;
+
+    // Edificio / columnas modernizado con degradado de marca
+    caps.column = `
+      <circle cx="32" cy="32" r="30" fill="url(#gCoin)" stroke="rgba(0,199,221,.55)" stroke-width="2"/>
+      <g transform="translate(32,32)">
+        <polygon points="0,-19 20,-9 -20,-9" fill="url(#gGold)"/>
+        <circle cx="0" cy="-13" r="3.2" fill="#00163A"/>
+        <rect x="-21" y="-8" width="42" height="3.4" rx="1.4" fill="#00C7DD"/>
+        <g fill="url(#gVC)">
+          <rect x="-17" y="-3.5" width="5.5" height="18" rx="1.4"/>
+          <rect x="-7.5" y="-3.5" width="5.5" height="18" rx="1.4"/>
+          <rect x="2" y="-3.5" width="5.5" height="18" rx="1.4"/>
+          <rect x="11.5" y="-3.5" width="5.5" height="18" rx="1.4"/>
+        </g>
+        <rect x="-22" y="15" width="44" height="4.5" rx="1.6" fill="#FDA818"/>
+      </g>`;
+
+    // Escudo / crest con birrete
+    caps.shield = `
+      <path d="M32,3 L57,12 V32 Q57,52 32,61 Q7,52 7,32 V12 Z" fill="url(#gShield)" stroke="#00C7DD" stroke-width="2"/>
+      <path d="M32,3 L57,12 V32 Q57,52 32,61 Q7,52 7,32 V12 Z" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="1" transform="scale(.9)" transform-origin="32 32"/>
+      <g transform="translate(32,30)">
+        <polygon points="0,-11 16,-4 0,2 -16,-4" fill="url(#gGold)"/>
+        <path d="M-9,-1 L-9,7 Q0,13 9,7 L9,-1 L0,2 Z" fill="#FDA818"/>
+        <path d="M16,-4 L16,8" stroke="#FFD451" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="16" cy="10" r="2.2" fill="#FFD451"/>
+      </g>
+      <rect x="20" y="44" width="24" height="3" rx="1.5" fill="#00C7DD"/>`;
+
+    // Pin/gota con birrete (map marker)
+    caps.pin = `
+      <path d="M32,61 C20,44 10,37 10,25 A22,22 0 1 1 54,25 C54,37 44,44 32,61 Z" fill="url(#gVC)" stroke="#fff" stroke-opacity=".3" stroke-width="1.5"/>
+      <circle cx="32" cy="25" r="15" fill="#0c285e"/>
+      <g transform="translate(32,26)">
+        <polygon points="0,-9 13,-3 0,2 -13,-3" fill="url(#gGold)"/>
+        <path d="M-7,-1 L-7,6 Q0,11 7,6 L7,-1 L0,2 Z" fill="#FDA818"/>
+        <circle cx="0" cy="-3" r="1.8" fill="#00163A"/>
+      </g>`;
+
+    const wrap = (inner) => `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+
+    const options = [
+      { id:'cur', cls:'cur', badge:['now','Actual'], name:'Edificio actual', img:true,
+        desc:'El ícono vigente: edificio clásico plano en navy, púrpura y dorado. Pesado y oscuro, se apaga sobre el globo.' },
+      { id:'coin', cls:'', badge:['rec','Recomendado'], name:'Moneda académica', svg:caps.coin,
+        desc:'Birrete dorado sobre una moneda navy con aro cian luminoso. Legible, premium y coherente con los marcadores de oportunidad.' },
+      { id:'cap', cls:'', badge:null, name:'Birrete con halo', svg:caps.cap,
+        desc:'Birrete con degradado violeta→cian y borla dorada, envuelto en un halo suave. Limpio y minimal.' },
+      { id:'column', cls:'', badge:null, name:'Columnas modernas', svg:caps.column,
+        desc:'Reinterpreta el edificio clásico con el degradado de marca y dorado, dentro de la moneda. Conserva el concepto original, más fino.' },
+      { id:'shield', cls:'', badge:null, name:'Escudo / crest', svg:caps.shield,
+        desc:'Escudo violeta con birrete dorado. Aire institucional y prestigioso, muy “universidad”.' },
+      { id:'pin', cls:'', badge:null, name:'Pin de mapa', svg:caps.pin,
+        desc:'Gota de mapa con degradado de marca y birrete. Refuerza la lectura de “ubicación” sobre el globo.' },
+    ];
+
+    const grid = document.getElementById('grid');
+    grid.innerHTML = options.map(o=>{
+      const big = o.img ? `<img src="assets/uni.png" alt="" style="width:100%;height:100%;object-fit:contain">` : wrap(o.svg);
+      const small = o.img ? `<img src="assets/uni.png" alt="">` : `<span class="m26">${wrap(o.svg)}</span>`;
+      const badge = o.badge ? `<span class="badge ${o.badge[0]}">${o.badge[1]}</span>` : '';
+      return `<div class="card ${o.cls}">
+        <div class="stage">${badge}<div class="big">${big}</div></div>
+        <div class="meta">
+          <div>
+            <div class="name">${o.name}</div>
+          </div>
+          <div class="desc">${o.desc}</div>
+          <div class="scale-row">
+            <div class="scale-globe">${small}${small}</div>
+            <div class="scale-cap">Tamaño real<b>26px en el globo</b></div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  </script>
+</body>
+</html>

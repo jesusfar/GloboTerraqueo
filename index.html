@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Ascendia · Oportunidades educativas en todo el mundo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    /* Ascendia design tokens */
+    --bg-dark:#002054;
+    --bg-deep:#00163A;
+    --surface:#FFFFFF;
+    --text:#263441;
+    --text-muted:#607080;
+    --border:#DDE6EE;
+    --gold:#FDA818;
+    --yellow:#FFCF31;
+    --orange:#FF8A00;
+    --cyan:#00C7DD;
+    --teal:#138DB8;
+    --purple:#4B22C9;
+    --violet:#6B36D6;
+    --planet-blue:#2056A7;
+    --eco:#59C84A;
+    --radius-card:16px;
+    --shadow-soft:0 12px 30px rgba(0,32,84,.18);
+    --glow-cyan:0 0 18px rgba(0,199,221,.45);
+    --glow-gold:0 0 18px rgba(253,168,24,.42);
+    /* type colors */
+    --t-beca:#FDA818;
+    --t-curso:#00C7DD;
+    --t-pasantia:#2056A7;
+    --t-voluntariado:#59C84A;
+    --t-intercambio:#4B22C9;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;width:100%;overflow:hidden}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:
+      radial-gradient(120% 90% at 50% 8%, #003a86 0%, var(--bg-dark) 38%, var(--bg-deep) 78%, #000c22 100%);
+    color:#fff;
+    -webkit-font-smoothing:antialiased;
+    position:fixed;inset:0;
+  }
+
+  /* ---------- Starfield ---------- */
+  #stars{position:absolute;inset:0;z-index:0;pointer-events:none;display:block}
+
+  /* ---------- Globe canvas host ---------- */
+  #globeViz{position:absolute;inset:0;z-index:1;cursor:grab}
+  #globeViz:active{cursor:grabbing}
+  /* soft brand vignette over the scene */
+  .vignette{
+    position:absolute;inset:0;z-index:2;pointer-events:none;
+    background:radial-gradient(115% 95% at 50% 42%, transparent 52%, rgba(0,12,34,.55) 100%);
+  }
+
+  /* ---------- Bright dot at cylinder base ---------- */
+  .cyl-dot{ position:absolute; pointer-events:none; will-change:opacity; }
+  /* aura suave: su tamaño se adapta en JS para envolver el cilindro */
+  .cyl-aura{
+    position:absolute; left:0; top:0; width:60px; height:60px; margin:-30px 0 0 -30px;
+    border-radius:50%; transform-origin:50% 50%; pointer-events:none; mix-blend-mode:screen;
+    background:radial-gradient(circle,
+      color-mix(in srgb, var(--c) 92%, #fff) 0%,
+      var(--c) 20%,
+      color-mix(in srgb, var(--c) 42%, transparent) 48%,
+      transparent 70%);
+    animation:cylAura 2.4s ease-in-out infinite;
+  }
+  @keyframes cylAura{ 0%,100%{ opacity:.6 } 50%{ opacity:.92 } }
+  /* núcleo brillante en la base */
+  .cyl-core{
+    position:absolute; left:0; top:0; width:16px; height:16px; margin:-8px 0 0 -8px;
+    border-radius:50%; transform-origin:50% 50%; pointer-events:none; z-index:1;
+    background:radial-gradient(circle, #fff 0%, color-mix(in srgb, var(--c) 80%, #fff) 40%, var(--c) 74%);
+    box-shadow:0 0 9px 2px var(--c), 0 0 22px 7px color-mix(in srgb, var(--c) 55%, transparent);
+    animation:cylCore 1.9s ease-in-out infinite;
+  }
+  @keyframes cylCore{
+    0%,100%{ box-shadow:0 0 8px 2px var(--c), 0 0 16px 5px color-mix(in srgb, var(--c) 42%, transparent); }
+    50%{ box-shadow:0 0 14px 4px var(--c), 0 0 32px 10px color-mix(in srgb, var(--c) 62%, transparent); }
+  }
+  @media (prefers-reduced-motion: reduce){ .cyl-aura,.cyl-core{ animation:none } }
+
+  /* ---------- Marcadores de universidades ---------- */
+  .uni-mark{
+    position:absolute; left:0; top:0; width:26px; height:26px; margin:-13px 0 0 -13px;
+    cursor:pointer; pointer-events:auto; will-change:transform,opacity;
+    transition:filter .15s ease;
+  }
+  /* Profundidad en reposo: sombra horneada en el propio glifo (no crea capa de
+     filtro que el compositor deba re-rasterizar al rotar). Apariencia casi idéntica
+     al drop-shadow anterior, sin el coste por frame. */
+  .uni-mark img{
+    width:100%; height:100%; display:block; -webkit-user-drag:none; user-select:none;
+    -webkit-filter:drop-shadow(0 2px 4px rgba(0,8,28,.6));
+    filter:drop-shadow(0 2px 4px rgba(0,8,28,.6));
+  }
+  .uni-mark::after{
+    content:""; position:absolute; inset:-32%; border-radius:50%; z-index:-1;
+    background:radial-gradient(circle, rgba(107,54,214,.6) 0%, transparent 66%);
+    opacity:0; transition:opacity .15s ease;
+  }
+  .uni-mark:hover{ filter:drop-shadow(0 3px 10px rgba(107,54,214,.8)); }
+  .uni-mark:hover::after{ opacity:1; }
+
+  .uni-tip{
+    position:fixed; z-index:60; pointer-events:none; transform:translate(-50%,-118%);
+    opacity:0; transition:opacity .12s ease;
+  }
+  .uni-tip.show{ opacity:1; }
+  .uni-tip .gl-tip .tt-type{ color:#b69bff; }
+  .uni-tip .gl-tip .tt-rank{ font-size:11px; color:#cdbdf2; }
+  .uni-tip .gl-tip .tt-rank b{ color:var(--cyan); }
+
+  /* ---------- Tarjeta universidad ---------- */
+  .uni-rank{
+    display:flex; align-items:center; gap:14px; margin:18px 0 6px; padding:16px 18px;
+    border-radius:14px; background:rgba(107,54,214,.13); border:1px solid rgba(107,54,214,.4);
+  }
+  .uni-rank .num{ font-family:'Montserrat',sans-serif; font-weight:800; font-size:34px; color:#b69bff; line-height:1; }
+  .uni-rank .lbl{ font-size:11.5px; color:#cdbdf2; line-height:1.4; }
+  .uni-rank .lbl b{ display:block; color:#fff; font-size:12.5px; font-weight:600; letter-spacing:.3px; }
+  .score-wrap{ margin-top:18px; }
+  .score-wrap .sk{ display:flex; justify-content:space-between; align-items:baseline; font-size:10.5px; letter-spacing:.8px; text-transform:uppercase; color:#7e97ba; margin-bottom:8px; }
+  .score-wrap .sk b{ color:#fff; font-family:'Montserrat',sans-serif; font-size:14px; letter-spacing:0; }
+  .score-bar{ height:8px; border-radius:6px; background:rgba(255,255,255,.1); overflow:hidden; }
+  .score-bar > i{ display:block; height:100%; border-radius:6px; background:linear-gradient(90deg, var(--violet), var(--cyan)); transition:width .5s cubic-bezier(.2,.9,.25,1); }
+  .cta.uni-cta{ color:#fff; background:linear-gradient(135deg, var(--violet), #8a4ff0, var(--cyan)); box-shadow:0 0 18px rgba(107,54,214,.5); text-decoration:none; }
+  .cta.uni-cta:hover{ box-shadow:0 8px 26px rgba(107,54,214,.6); }
+
+  /* ---------- Header ---------- */
+  header.topbar{
+    position:absolute;top:0;left:0;right:0;z-index:20;
+    display:flex;align-items:center;gap:18px;
+    padding:18px 28px;
+    background:linear-gradient(180deg, rgba(0,22,58,.92) 0%, rgba(0,22,58,.55) 65%, transparent 100%);
+    pointer-events:none;
+  }
+  .brand{display:flex;align-items:center;gap:13px;pointer-events:auto}
+  .iso{
+    position:relative;width:38px;height:38px;flex:none;
+    display:grid;place-items:center;
+  }
+  .iso .planet{
+    position:absolute;inset:0;border-radius:50%;
+    background:conic-gradient(from 220deg, var(--planet-blue), #003D99, var(--violet), var(--planet-blue));
+    box-shadow:0 0 0 1.5px rgba(255,255,255,.18) inset, var(--glow-cyan);
+  }
+  .iso .ring{
+    position:absolute;inset:-3px;border-radius:50%;
+    border:1.5px solid rgba(0,199,221,.55);
+    transform:rotate(-22deg) scaleY(.42);
+  }
+  .iso .arrow{
+    position:relative;width:0;height:0;z-index:2;
+    border-left:7px solid transparent;border-right:7px solid transparent;
+    border-bottom:13px solid var(--gold);
+    filter:drop-shadow(0 1px 4px rgba(253,168,24,.6));margin-top:-2px;
+  }
+  .wordmark{display:flex;flex-direction:column;line-height:1}
+  .wordmark .name{
+    font-family:'Montserrat',sans-serif;font-weight:800;font-size:21px;
+    letter-spacing:.2px;color:#fff;
+  }
+  .wordmark .name b{color:var(--cyan);font-weight:800}
+  .wordmark .claim{
+    font-size:11.5px;color:#9fb6d4;font-weight:500;margin-top:3px;letter-spacing:.2px;
+  }
+
+  /* ---------- Left controls (legend + filters) ---------- */
+  .controls{
+    position:absolute;top:92px;left:28px;z-index:18;
+    width:264px;max-width:calc(100vw - 56px);
+    display:flex;flex-direction:column;gap:12px;
+  }
+  .glass{
+    background:rgba(8,28,62,.42);
+    backdrop-filter:blur(16px) saturate(1.2);
+    -webkit-backdrop-filter:blur(16px) saturate(1.2);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:var(--radius-card);
+    box-shadow:0 14px 40px rgba(0,12,34,.45);
+  }
+  .panel-head{
+    font-family:'Montserrat',sans-serif;font-weight:700;
+    font-size:11px;letter-spacing:1.4px;text-transform:uppercase;
+    color:#8fa9cc;padding:14px 16px 9px;
+  }
+  .filters{display:flex;flex-wrap:wrap;gap:8px;padding:0 14px 14px}
+  .chip{
+    display:inline-flex;align-items:center;gap:7px;
+    padding:7px 11px;border-radius:999px;cursor:pointer;
+    font-size:12px;font-weight:600;color:#dfeaf8;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.14);
+    transition:all .18s ease;user-select:none;
+  }
+  .chip .dot{width:9px;height:9px;border-radius:50%;flex:none;box-shadow:0 0 8px currentColor}
+  .chip:hover{background:rgba(255,255,255,.12)}
+  .chip[aria-pressed="false"]{opacity:.38;filter:grayscale(.5)}
+  .chip[aria-pressed="false"] .dot{box-shadow:none}
+
+  .legend-row{
+    display:flex;align-items:center;gap:10px;padding:7px 16px;font-size:12.5px;color:#cfe0f4;
+  }
+  .legend-row:last-child{padding-bottom:14px}
+  .legend-row .sw{width:11px;height:11px;border-radius:50%;flex:none;box-shadow:0 0 9px currentColor}
+  .legend-row .meta{margin-left:auto;font-size:11px;color:#7e97ba}
+
+  .urgency-note{
+    display:flex;align-items:center;gap:9px;padding:11px 16px;
+    border-top:1px solid rgba(255,255,255,.08);font-size:11.5px;color:#9fb6d4;
+  }
+  .pulse-mini{
+    width:12px;height:12px;border-radius:50%;background:var(--gold);flex:none;position:relative;
+  }
+  .pulse-mini::after{
+    content:"";position:absolute;inset:0;border-radius:50%;
+    box-shadow:0 0 0 0 rgba(253,168,24,.6);animation:pm 1.8s ease-out infinite;
+  }
+  @keyframes pm{to{box-shadow:0 0 0 9px rgba(253,168,24,0)}}
+
+  /* ---------- Stats pill (top right) ---------- */
+  .topright{
+    position:absolute;top:92px;right:28px;z-index:18;
+    display:flex;gap:10px;align-items:center;
+  }
+  .count-pill{
+    display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:999px;
+    font-size:12.5px;color:#dfeaf8;font-weight:600;
+  }
+  .count-pill b{font-family:'Montserrat',sans-serif;color:var(--cyan);font-size:15px}
+  .icon-btn{
+    width:42px;height:42px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
+    color:#dfeaf8;border:1px solid rgba(255,255,255,.14);background:rgba(8,28,62,.42);
+    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);transition:all .18s;
+  }
+  .icon-btn:hover{background:rgba(255,255,255,.12);color:#fff}
+  .icon-btn svg{width:19px;height:19px}
+
+  /* ---------- Tooltip ---------- */
+  .gl-tip{
+    pointer-events:none;font-family:'Inter',sans-serif;
+    background:rgba(6,22,50,.92);backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,.16);border-radius:11px;
+    padding:10px 13px;box-shadow:0 10px 30px rgba(0,0,0,.5);max-width:240px;
+  }
+  .gl-tip .tt-type{
+    display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;
+    letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px;
+  }
+  .gl-tip .tt-type .d{width:7px;height:7px;border-radius:50%}
+  .gl-tip .tt-title{font-size:13px;font-weight:600;color:#fff;line-height:1.3;margin-bottom:5px}
+  .gl-tip .tt-due{font-size:11px;color:#9fb6d4}
+  .gl-tip .tt-due b{color:var(--gold)}
+
+  /* ---------- Globo de diálogo de Marvin ---------- */
+  .marvin-bubble{
+    position:fixed; left:0; top:0; z-index:70; pointer-events:none;
+    transform:translate(-50%,-100%);
+    display:flex; align-items:center; gap:9px;
+    font-family:'Inter',sans-serif; white-space:nowrap;
+    background:linear-gradient(135deg, rgba(46,212,255,.96), rgba(107,54,214,.96));
+    color:#fff; font-size:14px; font-weight:500;
+    padding:10px 15px; border-radius:14px;
+    border:1px solid rgba(255,255,255,.4);
+    box-shadow:0 12px 34px rgba(0,12,34,.55), 0 0 22px rgba(46,212,255,.4);
+    opacity:0; transition:opacity .25s ease, transform .25s cubic-bezier(.2,1.2,.3,1);
+  }
+  .marvin-bubble.show{ transform:translate(-50%,-100%) scale(1); }
+  .marvin-bubble:not(.show){ transform:translate(-50%,-90%) scale(.85); }
+  .marvin-bubble .mb-text b{ font-weight:800; letter-spacing:.2px; }
+  .marvin-bubble .mb-wave{ font-size:17px; line-height:1; }
+  .marvin-bubble .mb-arrow{
+    position:absolute; left:50%; bottom:-7px; width:14px; height:14px;
+    transform:translateX(-50%) rotate(45deg);
+    background:linear-gradient(135deg, rgba(107,54,214,.96), rgba(107,54,214,.96));
+    border-right:1px solid rgba(255,255,255,.4); border-bottom:1px solid rgba(255,255,255,.4);
+    border-radius:0 0 3px 0;
+  }
+
+  /* ---------- Detail panel ---------- */
+  .detail{
+    position:absolute;top:0;right:0;bottom:0;z-index:30;
+    width:392px;max-width:92vw;
+    transform:translateX(105%);transition:transform .42s cubic-bezier(.2,.9,.25,1);
+    display:flex;flex-direction:column;
+    background:rgba(10,30,66,.55);
+    backdrop-filter:blur(26px) saturate(1.3);-webkit-backdrop-filter:blur(26px) saturate(1.3);
+    border-left:1px solid rgba(255,255,255,.14);
+    box-shadow:-30px 0 80px rgba(0,12,34,.5);
+  }
+  .detail.open{transform:translateX(0)}
+  .detail-close{
+    position:absolute;top:18px;right:18px;width:34px;height:34px;border-radius:50%;z-index:5;
+    display:grid;place-items:center;cursor:pointer;color:#cfe0f4;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);transition:all .18s;
+  }
+  .detail-close:hover{background:rgba(255,255,255,.18);color:#fff}
+  .detail-hero{
+    padding:34px 30px 24px;position:relative;overflow:hidden;
+    border-bottom:1px solid rgba(255,255,255,.1);
+  }
+  .detail-hero .glowblob{
+    position:absolute;width:220px;height:220px;border-radius:50%;pointer-events:none;
+    top:-90px;right:-60px;filter:blur(34px);opacity:.5;
+  }
+  .d-type{
+    display:inline-flex;align-items:center;gap:8px;position:relative;
+    font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+    padding:6px 12px;border-radius:999px;margin-bottom:16px;
+    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+  }
+  .d-type .d{width:8px;height:8px;border-radius:50%}
+  .d-title{
+    position:relative;font-family:'Montserrat',sans-serif;font-weight:700;
+    font-size:24px;line-height:1.22;color:#fff;text-wrap:pretty;
+  }
+  .detail-body{padding:8px 30px 26px;overflow-y:auto;flex:1}
+  .countdown{
+    display:flex;align-items:center;gap:14px;margin:18px 0 6px;padding:16px 18px;
+    border-radius:14px;background:rgba(253,168,24,.1);border:1px solid rgba(253,168,24,.32);
+  }
+  .countdown .num{font-family:'Montserrat',sans-serif;font-weight:800;font-size:34px;color:var(--gold);line-height:1}
+  .countdown .lbl{font-size:11.5px;color:#e7c690;line-height:1.4}
+  .countdown .lbl b{display:block;color:#fff;font-size:12.5px;font-weight:600;letter-spacing:.3px}
+  .countdown.urgent{background:rgba(255,138,0,.14);border-color:rgba(255,138,0,.45)}
+  .countdown.urgent .num{color:var(--orange)}
+
+  .period{
+    display:flex;align-items:stretch;gap:10px;margin-top:12px;
+  }
+  .period-cell{
+    flex:1;padding:13px 15px;border-radius:13px;
+    background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  }
+  .period-cell .pk{
+    display:block;font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:#7e97ba;margin-bottom:6px;
+  }
+  .period-cell .pv{
+    display:flex;align-items:center;gap:7px;font-size:14px;font-weight:600;color:#fff;
+  }
+  .period-cell .pv::before{
+    content:"";width:8px;height:8px;border-radius:50%;flex:none;
+  }
+  .period-cell.open .pv::before{background:var(--cyan);box-shadow:var(--glow-cyan)}
+  .period-cell.close .pv::before{background:var(--gold);box-shadow:var(--glow-gold)}
+  .period-sep{
+    align-self:center;color:#5f7aa0;font-size:18px;flex:none;
+  }
+
+  .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
+  .meta-cell{
+    padding:14px 16px;border-radius:13px;background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.1);
+  }
+  .meta-cell .k{font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:#7e97ba;margin-bottom:6px}
+  .meta-cell .v{font-size:14.5px;font-weight:600;color:#fff;display:flex;align-items:center;gap:8px}
+  .meta-cell .v svg{width:15px;height:15px;color:var(--cyan);flex:none}
+  .meta-cell.full{grid-column:1 / -1}
+
+  .cta{
+    display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+    margin-top:24px;padding:16px;border:none;border-radius:13px;cursor:pointer;
+    font-family:'Inter',sans-serif;font-weight:600;font-size:15px;color:var(--bg-deep);
+    background:linear-gradient(135deg, var(--orange), var(--gold), var(--yellow));
+    box-shadow:var(--glow-gold);transition:transform .15s, box-shadow .2s;
+  }
+  .cta:hover{transform:translateY(-2px);box-shadow:0 8px 26px rgba(253,168,24,.6)}
+  .cta:active{transform:translateY(0)}
+  .cta svg{width:18px;height:18px}
+
+  /* ---------- Settings panel ---------- */
+  .settings{
+    position:absolute;bottom:24px;right:28px;z-index:25;width:288px;
+    transform:translateY(calc(100% + 40px));opacity:0;pointer-events:none;
+    transition:transform .35s cubic-bezier(.2,.9,.25,1), opacity .3s;
+    padding:6px 4px 10px;
+  }
+  .settings.open{transform:translateY(0);opacity:1;pointer-events:auto}
+  .settings .panel-head{display:flex;align-items:center;justify-content:space-between}
+  .set-row{padding:11px 16px}
+  .set-row .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+  .set-row .top label{font-size:12.5px;font-weight:600;color:#dfeaf8}
+  .set-row .top .val{font-size:11.5px;color:var(--cyan);font-family:'Inter';font-weight:600}
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:4px;
+    background:rgba(255,255,255,.18);outline:none;cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+    background:var(--cyan);box-shadow:var(--glow-cyan);cursor:pointer;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:16px;height:16px;border:none;border-radius:50%;background:var(--cyan);box-shadow:var(--glow-cyan);cursor:pointer;
+  }
+  .swatches{display:flex;gap:9px;padding:4px 16px 8px}
+  .swatch{
+    width:30px;height:30px;border-radius:9px;cursor:pointer;border:2px solid transparent;
+    transition:transform .15s;
+  }
+  .swatch:hover{transform:scale(1.08)}
+  .swatch[aria-pressed="true"]{border-color:#fff;box-shadow:0 0 0 2px rgba(0,199,221,.5)}
+
+  /* ---------- Loading ---------- */
+  #loader{
+    position:absolute;inset:0;z-index:40;display:grid;place-items:center;
+    background:var(--bg-deep);transition:opacity .6s;
+  }
+  #loader.hide{opacity:0;pointer-events:none}
+  .spin{
+    width:46px;height:46px;border-radius:50%;
+    border:3px solid rgba(0,199,221,.2);border-top-color:var(--cyan);
+    animation:sp 1s linear infinite;
+  }
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .load-txt{position:absolute;margin-top:90px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#5f7aa0}
+
+  /* hint */
+  .hint{
+    position:absolute;bottom:24px;left:28px;z-index:18;font-size:11.5px;color:#7e97ba;
+    display:flex;align-items:center;gap:8px;pointer-events:none;
+  }
+  .hint kbd{
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
+    border-radius:6px;padding:2px 7px;font-family:'Inter';font-size:10.5px;color:#cfe0f4;
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:720px){
+    header.topbar{padding:14px 16px}
+    .wordmark .claim{display:none}
+    .controls{top:74px;left:14px;width:calc(100vw - 28px);max-width:340px}
+    .topright{top:auto;bottom:80px;right:14px}
+    .count-pill{display:none}
+    .detail{width:100%;max-width:100%;border-left:none;border-top:1px solid rgba(255,255,255,.14);
+      top:auto;height:78vh;transform:translateY(105%)}
+    .detail.open{transform:translateY(0)}
+    .settings{right:14px;left:14px;width:auto;bottom:14px}
+    .hint{display:none}
+  }
+</style>
+</head>
+<body>
+  <canvas id="stars"></canvas>
+  <div id="globeViz"></div>
+  <div class="vignette"></div>
+
+  <!-- Header -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="iso" aria-hidden="true">
+        <div class="planet"></div>
+        <div class="ring"></div>
+        <div class="arrow"></div>
+      </div>
+      <div class="wordmark">
+        <span class="name">Ascend<b>ia</b></span>
+        <span class="claim">Oportunidades educativas en todo el mundo</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Left controls -->
+  <div class="controls">
+    <div class="glass">
+      <div class="panel-head">Filtrar por tipo</div>
+      <div class="filters" id="filters"></div>
+      <div class="urgency-note">
+        <span class="pulse-mini"></span>
+        Tocá cualquier punto para ver la oportunidad.
+      </div>
+      <div class="uni-row" style="padding:0 14px 14px">
+        <div class="chip uni-chip" id="uniToggle" role="button" tabindex="0" aria-pressed="true" title="Mostrar / ocultar universidades">
+          <span class="dot" style="background:var(--violet);color:var(--violet)"></span>
+          Top Universidades · QS 2026
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top right -->
+  <div class="topright">
+    <div class="glass count-pill"><b id="countNum">0</b>&nbsp;oportunidades visibles</div>
+    <div class="icon-btn" id="settingsBtn" title="Ajustes del globo" role="button" tabindex="0">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="settings glass" id="settings">
+    <div class="panel-head">
+      Ajustes del globo
+      <span style="cursor:pointer;color:#7e97ba;font-size:16px" id="settingsClose">✕</span>
+    </div>
+    <div class="swatches" id="oceanSwatches"></div>
+    <div class="set-row">
+      <div class="top"><label>Intensidad del glow</label><span class="val" id="glowVal">100%</span></div>
+      <input type="range" id="glowRange" min="0" max="200" value="100" />
+    </div>
+    <div class="set-row">
+      <div class="top"><label>Velocidad de rotación</label><span class="val" id="rotVal">0.40</span></div>
+      <input type="range" id="rotRange" min="0" max="200" value="40" />
+    </div>
+    <div class="set-row">
+      <div class="top"><label>Brillo de continentes</label><span class="val" id="landVal">Medio</span></div>
+      <input type="range" id="landRange" min="0" max="100" value="50" />
+    </div>
+  </div>
+
+  <!-- Detail panel -->
+  <aside class="detail" id="detail" aria-hidden="true">
+    <div class="detail-close" id="detailClose" role="button" tabindex="0" title="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+    </div>
+    <div class="detail-hero">
+      <div class="glowblob" id="d-glow"></div>
+      <div class="d-type" id="d-type"><span class="d"></span><span class="d-type-txt"></span></div>
+      <h2 class="d-title" id="d-title"></h2>
+    </div>
+    <div class="detail-body">
+      <div class="countdown" id="d-countdown">
+        <div class="num" id="d-days">0</div>
+        <div class="lbl">días restantes<b>hasta el cierre</b></div>
+      </div>
+      <div class="period">
+        <div class="period-cell open">
+          <span class="pk">Apertura</span>
+          <span class="pv" id="d-open">—</span>
+        </div>
+        <span class="period-sep" aria-hidden="true">→</span>
+        <div class="period-cell close">
+          <span class="pk">Cierre</span>
+          <span class="pv" id="d-close">—</span>
+        </div>
+      </div>
+      <div class="meta-grid">
+        <div class="meta-cell">
+          <div class="k">Modalidad</div>
+          <div class="v"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"></rect><path d="M8 21h8M12 17v4"></path></svg><span id="d-mod"></span></div>
+        </div>
+        <div class="meta-cell">
+          <div class="k">Idioma</div>
+          <div class="v"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"></path></svg><span id="d-lang"></span></div>
+        </div>
+        <div class="meta-cell full">
+          <div class="k">Coordenadas</div>
+          <div class="v"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg><span id="d-coords"></span></div>
+        </div>
+      </div>
+      <button class="cta" id="d-cta">
+        Ver oportunidad
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Detalle universidad -->
+  <aside class="detail" id="uniDetail" aria-hidden="true">
+    <div class="detail-close" id="uniClose" role="button" tabindex="0" title="Cerrar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+    </div>
+    <div class="detail-hero">
+      <div class="glowblob" style="background:radial-gradient(circle, #6B36D6, transparent 70%)"></div>
+      <div class="d-type" style="background:rgba(107,54,214,.16);border-color:rgba(107,54,214,.5);color:#b69bff">
+        <span class="d" style="background:#6B36D6"></span>Universidad
+      </div>
+      <h2 class="d-title" id="u-title"></h2>
+    </div>
+    <div class="detail-body">
+      <div class="uni-rank">
+        <div class="num" id="u-rank">#—</div>
+        <div class="lbl">posición en el ranking<b>QS World University Rankings 2026</b></div>
+      </div>
+      <div class="score-wrap">
+        <div class="sk">Puntaje QS <b id="u-score">—</b></div>
+        <div class="score-bar"><i id="u-scorebar" style="width:0%"></i></div>
+      </div>
+      <div class="meta-grid">
+        <div class="meta-cell">
+          <div class="k">País / Territorio</div>
+          <div class="v"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"></path></svg><span id="u-country"></span></div>
+        </div>
+        <div class="meta-cell">
+          <div class="k">Coordenadas</div>
+          <div class="v"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg><span id="u-coords"></span></div>
+        </div>
+      </div>
+      <a class="cta uni-cta" id="u-maps" target="_blank" rel="noopener">
+        Ver en Google Maps
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+      </a>
+    </div>
+  </aside>
+
+  <div class="hint"><kbd>Arrastrá</kbd> para girar · <kbd>Scroll</kbd> para acercar</div>
+  <div id="loader">
+    <div class="spin"></div>
+    <div class="load-txt">Cargando el mundo…</div>
+  </div>
+
+  <script src="https://unpkg.com/globe.gl@2.34.4/dist/globe.gl.min.js" crossorigin="anonymous"></script>
+  <script src="universidades.js"></script>
+  <script src="app.js"></script>
+  <script src="marvin.js"></script>
+  <script type="module">
+    // three r171 (misma revisión que globe.gl) para construir el modelo de Marvin
+    import * as THREE from 'https://unpkg.com/three@0.171.0/build/three.module.js';
+    try { window.initMarvin(THREE); }
+    catch (err) { console.log('[MARVIN-INIT-ERR]', err && err.stack); }
+  </script>
+</body>
+</html>
