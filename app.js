@@ -46,6 +46,10 @@ const fmtFecha = (iso) => {
   return `${d} ${meses[(+m)-1]} ${y}`;
 };
 const urgencia = (dias) => Math.min(1, Math.max(0, (200 - dias) / 200)); // 0..1
+const fmtCoord = (n) => Number(n).toFixed(6);
+const fmtCoords = (lat, lng) => `${fmtCoord(lat)}°, ${fmtCoord(lng)}°`;
+const googleMapsUrl = (lat, lng) =>
+  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${fmtCoord(lat)},${fmtCoord(lng)}`)}`;
 
 /* ---------------------------------------------------------------------------
    3. ESTADO
@@ -89,7 +93,13 @@ async function init() {
     ...u, uid: 'u' + i, kind: 'uni', lat: +u.lat, lng: +u.lng
   })).filter(u => isFinite(u.lat) && isFinite(u.lng));
 
-  GLOBE = Globe({ rendererConfig: { preserveDrawingBuffer: true, antialias: true } })(document.getElementById('globeViz'))
+  GLOBE = Globe({
+    rendererConfig: {
+      preserveDrawingBuffer: false,
+      antialias: false,
+      powerPreference: 'high-performance'
+    }
+  })(document.getElementById('globeViz'))
     .backgroundColor('rgba(0,0,0,0)')
     .showAtmosphere(true)
     .atmosphereColor('#00C7DD')
@@ -99,7 +109,7 @@ async function init() {
     .pointColor(d => TIPOS[d.tipo].color)
     .pointAltitude(() => BASE_ALT)
     .pointRadius(() => 0.78)
-    .pointResolution(20)
+    .pointResolution(10)
     .pointsMerge(false)
     .pointsTransitionDuration(0)
     .pointLabel(tooltipHTML)
@@ -211,7 +221,8 @@ async function init() {
   const capDPR = () => {
     try {
       const r = GLOBE.renderer();
-      if (r && r.setPixelRatio) r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+      const cap = window.innerWidth < 760 ? 1.15 : 1.35;
+      if (r && r.setPixelRatio) r.setPixelRatio(Math.min(window.devicePixelRatio || 1, cap));
     } catch (e) {}
   };
   capDPR();
@@ -383,7 +394,7 @@ function cargarLimites() {
 }
 
 /* las líneas que se renderizan dependen del zoom y de la zona visible */
-const MAX_PATHS = 800;
+const MAX_PATHS = 420;
 function aplicarLimites(alt) {
   // nivel objetivo según altitud
   const lvl = (alt > LABEL_SHOW_ALT) ? -1 : 1;
@@ -582,6 +593,7 @@ function visibles() {
 }
 let _faros = [];      // cache de faros visibles (oportunidades)
 let VIS_UNIS = [];    // universidades realmente en pantalla (cara visible + en rango de zoom)
+const MAX_VISIBLE_UNIS = 96;
 function refrescarPuntos() {
   _faros = visibles();
   GLOBE.pointsData(_faros);
@@ -602,6 +614,8 @@ function actualizarMarcadores(pov) {
     const cp = cam.position;
     const camLen = Math.hypot(cp.x, cp.y, cp.z) || 1;
     const W = window.innerWidth, H = window.innerHeight, M = 80;  // margen fuera de pantalla
+    const candidates = [];
+    const cx = W / 2, cy = H / 2;
     for (const u of UNI_DATA) {
       const c3 = GLOBE.getCoords(u.lat, u.lng, 0);
       const nlen = Math.hypot(c3.x, c3.y, c3.z) || 1;
@@ -610,13 +624,20 @@ function actualizarMarcadores(pov) {
       if (keep) {                                     // y dentro del viewport (con margen)
         const s = GLOBE.getScreenCoords(u.lat, u.lng, 0);
         keep = s.x >= -M && s.x <= W + M && s.y >= -M && s.y <= H + M;
+        if (keep) u._screenD = (s.x - cx) * (s.x - cx) + (s.y - cy) * (s.y - cy);
       }
       if (keep) {
-        vis.push(u);
+        candidates.push(u);
       } else {
         const el = uniEls.get(u.uid);
         if (el) el.style.opacity = '0';   // entra ya invisible cuando vuelva a verse
       }
+    }
+    candidates.sort((a, b) => a._screenD - b._screenD);
+    vis.push(...candidates.slice(0, MAX_VISIBLE_UNIS));
+    for (let i = MAX_VISIBLE_UNIS; i < candidates.length; i++) {
+      const el = uniEls.get(candidates[i].uid);
+      if (el) el.style.opacity = '0';
     }
   } else if (UNI_DATA.length) {
     for (const u of UNI_DATA) {
@@ -748,7 +769,8 @@ function animarPuntos(now) {
       const scaleChanged = Math.abs(uScale - _lastUScale) > 0.002;    // solo cambia con zoom
       _lastUScale = uScale;
       const ustr = 'scale(' + uScale.toFixed(3) + ')';
-      for (const u of UNI_DATA) {
+      const visibleUnis = VIS_UNIS.length ? VIS_UNIS : UNI_DATA;
+      for (const u of visibleUnis) {
         const el = uniEls.get(u.uid);
         if (!el) continue;
         const c3 = GLOBE.getCoords(u.lat, u.lng, 0);
@@ -823,8 +845,10 @@ function ocultarUniTip() { if (_uniTipEl) _uniTipEl.classList.remove('show'); }
 /* ---------------------------------------------------------------------------
    9. PANEL DE DETALLE (click / tap)
 --------------------------------------------------------------------------- */
+let detalleActivo = null;
 function abrirDetalle(d) {
   if (!d) return;
+  detalleActivo = d;
   cerrarUniversidad();
   const t = TIPOS[d.tipo];
   const det = document.getElementById('detail');
@@ -842,8 +866,7 @@ function abrirDetalle(d) {
   det.querySelector('#d-close').textContent = fmtFecha(d.fechaLimite);
   det.querySelector('#d-mod').textContent = capitalizar(d.modalidad);
   det.querySelector('#d-lang').textContent = d.idioma;
-  det.querySelector('#d-coords').textContent =
-    `${d.lat.toFixed(2)}°, ${d.lng.toFixed(2)}°`;
+  det.querySelector('#d-coords').textContent = fmtCoords(d.lat, d.lng);
 
   const cd = det.querySelector('#d-countdown');
   cd.classList.toggle('urgent', d.diasRestantes <= URGENTE_DIAS);
@@ -856,6 +879,7 @@ function abrirDetalle(d) {
   GLOBE.pointOfView({ lat: d.lat, lng: d.lng, altitude: 1.8 }, 900);
 }
 function cerrarDetalle() {
+  detalleActivo = null;
   const det = document.getElementById('detail');
   det.classList.remove('open');
   det.setAttribute('aria-hidden', 'true');
@@ -866,6 +890,7 @@ function wireDetalle() {
   document.getElementById('d-cta').addEventListener('click', () => {
     document.getElementById('d-cta').animate(
       [{transform:'scale(1)'},{transform:'scale(.96)'},{transform:'scale(1)'}], {duration:180});
+    if (detalleActivo) window.open(googleMapsUrl(detalleActivo.lat, detalleActivo.lng), '_blank', 'noopener');
   });
 }
 
@@ -882,9 +907,10 @@ function abrirUniversidad(u) {
   det.querySelector('#u-score').textContent = isFinite(sc) ? sc.toFixed(1) : (u.score || '—');
   det.querySelector('#u-scorebar').style.width = (isFinite(sc) ? Math.max(3, Math.min(100, sc)) : 0) + '%';
   det.querySelector('#u-country').textContent = u.country || '—';
-  det.querySelector('#u-coords').textContent = u.lat.toFixed(2) + '°, ' + u.lng.toFixed(2) + '°';
+  det.querySelector('#u-coords').textContent = fmtCoords(u.lat, u.lng);
   const maps = det.querySelector('#u-maps');
-  if (u.maps) { maps.href = u.maps; maps.style.display = ''; } else { maps.style.display = 'none'; }
+  maps.href = googleMapsUrl(u.lat, u.lng);
+  maps.style.display = '';
   det.classList.add('open');
   det.setAttribute('aria-hidden', 'false');
   GLOBE.controls().autoRotate = false;
