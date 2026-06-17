@@ -138,9 +138,9 @@ async function init() {
     .labelsData([])
     .labelLat('lat').labelLng('lng')
     .labelText('name')
-    .labelSize(d => d.size || 0.5)
-    .labelColor(d => d.color || 'rgba(233,241,253,0.92)')
-    .labelResolution(2)
+    .labelSize(d => d.size || 0.66)
+    .labelColor(d => d.color || 'rgba(255,255,255,0.96)')
+    .labelResolution(3)
     .labelAltitude(d => d.alt != null ? d.alt : 0.015)
     .labelIncludeDot(false)
     .labelsTransitionDuration(0);
@@ -269,8 +269,8 @@ function cargarContinentes() {
         return {
           lat: c.lat, lng: c.lng,
           name: p.ADMIN || p.NAME || p.name || '',
-          size: 0.55, alt: 0.015,
-          color: 'rgba(233,241,253,0.94)', kind: 'country'
+          size: 0.72, alt: 0.021,
+          color: 'rgba(255,255,255,0.98)', kind: 'country'
         };
       }).filter(l => l.name);
       actualizarEtiquetas(GLOBE.pointOfView());
@@ -610,10 +610,10 @@ function etiquetasEstados(pov) {
     cercanas.push(s);
   }
   cercanas.sort((a, b) => a._dd - b._dd);
-  const top = cercanas.slice(0, 80).map(s => ({
+  const top = cercanas.slice(0, 55).map(s => ({
     lat: s.lat, lng: s.lng, name: s.name,
-    size: 0.34, alt: 0.014,
-    color: 'rgba(186,222,244,0.92)', kind: 'state'
+    size: 0.46, alt: 0.02,
+    color: 'rgba(220,242,255,0.96)', kind: 'state'
   }));
   GLOBE.labelsData(top);
 }
@@ -622,7 +622,7 @@ function etiquetasEstados(pov) {
 function etiquetasCiudades(pov, alt) {
   if (!CITY_PLACES.length) { return; }
   const t = Math.min(1, Math.max(0, (CITY_ALT - alt) / (CITY_ALT - 0.06)));
-  const maxRank = Math.round(2 + t * 8);        // 2 (megaciudades) … 10 (pueblos)
+  const maxRank = Math.round(2 + t * 6);        // 2 (megaciudades) … 8 (ciudades relevantes)
   const cLat = pov.lat, cLng = pov.lng;
   const cMax = Math.cos(cLat * Math.PI / 180);
 
@@ -641,11 +641,11 @@ function etiquetasCiudades(pov, alt) {
     cercanas.push(c);
   }
   cercanas.sort((a, b) => a._dd - b._dd);
-  const top = cercanas.slice(0, 90).map(c => ({
+  const top = cercanas.slice(0, 58).map(c => ({
     lat: c.lat, lng: c.lng, name: c.name,
-    size: Math.max(0.10, 0.10 + (8 - c.rank) * 0.018),
-    alt: 0.012,
-    color: c.rank <= 3 ? 'rgba(236,244,255,0.95)' : 'rgba(150,210,235,0.92)',
+    size: 0.24 + Math.max(0, 8 - c.rank) * 0.026,
+    alt: 0.019,
+    color: c.rank <= 3 ? 'rgba(255,255,255,0.98)' : 'rgba(196,234,252,0.96)',
     kind: 'city'
   }));
   GLOBE.labelsData(top);
